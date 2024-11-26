@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Shapes;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TestNovell
 {
@@ -12,45 +16,56 @@ namespace TestNovell
         private string[] HistoryLines { get; set; }//Массив строк истории
         private int Line { get; set; }//Строка на который мы находимся по истории
         private string Name { get; set; }
-        private bool MW { get; set; }//Пол игрока: мужской/женский
+        private bool MW { get; set; }//Пол игрока: мужской - true/женский - false
         public TextWorks(string[] Lines, int line)
         {
             HistoryLines = Lines;
             Line = line;
         }
-        public void PreparingLine(ref string text, ref string person, out string[] choiceItems)
+        public void InspectionLine(ref string text, ref string person, ref int numChoice,ref string[] choiceItems)
         {
-            Regex reg = new Regex(@"/choice{\d*}");
-            MatchCollection matches = reg.Matches(HistoryLines[Line]);
-            if (matches.Count > 0)
-            {
-                HistoryLines[Line] = HistoryLines[Line].Replace(matches[0].Value, "");
-                reg = new Regex(@"/choiseItem{\d*}_");
-                matches = reg.Matches(HistoryLines[Line]);
-                choiceItems = new string[matches.Count];
-                if (matches.Count > 0)
-                {
-                    for (int i = 0; i < matches.Count; i++)
-                    {
-                        choiceItems[i] = matches[i].Value;
-                        HistoryLines[Line] = HistoryLines[Line].Replace(matches[i].Value, "");
-                    }
-                }
-            }
-            Name = "Алекс";
-            text = person = null;
-            choiceItems = null;
-            if (HistoryLines[Line].StartsWith("/")) person = HistoryLines[Line].Split(" ")[0].Split("/")[1];
-            else if (HistoryLines[Line].StartsWith("*")) person = "Расказчик";
-            if (person == "Расказчик") text = HistoryLines[Line].Split("*")[1];
-            else text = HistoryLines[Line].Split($"/{person}")[1];
-            if (HistoryLines[Line].Contains("/gen"))
-            {
-                if (MW) HistoryLines[Line] = HistoryLines[Line].Replace("/gen", "а");
-                else HistoryLines[Line] = HistoryLines[Line].Replace("/gen", "");
-            }
-            if (HistoryLines[Line].Contains("/name")) HistoryLines[Line] = HistoryLines[Line].Replace("/name", Name);
+            Name = "Гоша";
             text = HistoryLines[Line];
+            InsertCommands(ref text, "/name", Name);
+            InsertCommands(ref text, "*");
+            if (text.StartsWith("/choice{0}"))
+            {
+
+            }
+            SearchCommand(ref text, @"/choice{\d*}", ref numChoice, ref choiceItems);
+            SearchCommand(ref text, @"/choiseItem{\d*}+_(\w+)", ref numChoice, ref choiceItems);
+            InsertCommands(ref text, "/gen", MW ? "" : "а");
+            SearchPerson(ref text, ref person);
+        }
+        private void InsertCommands(ref string line, string command, string swap = "") => line = line.Replace(command, swap);
+        private void SearchCommand(ref string text, string command, ref int numChoice, ref string[] choiceItems)
+        {
+            MatchCollection MC = Regex.Matches(text, command);
+            choiceItems = new string[MC.Count];
+            if (command == @"/choice{\d*}" && MC.Count>0) numChoice = Convert.ToInt32(MC[0].Value.Replace("/choice{","").Replace("}",""));
+            for (int i = 0; i < MC.Count; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(MC[i].Groups[1].Value)) choiceItems[i] = MC[i].Groups[1].Value;
+            }
+            command = command.Replace(@"(\w+)", "");
+            text = Regex.Replace(text, command, "");
+        }
+        private void SearchPerson(ref string text, ref string person)
+        {
+            if (text.StartsWith("/"))
+            {
+                person = text.Split(' ', 2)[0].Replace("/", "");
+                text = text.Replace("/" + person + " ", "");
+                person += ":";
+            }
+            else person = "Рассказчик:";
+        }
+        public void TransitionSelectedBlock(int tag, int numChoice)
+        {
+            foreach (var line in HistoryLines)
+            {
+                if (line.Contains("/choice{" + numChoice + "}")) MessageBox.Show(tag.ToString()); break;
+            }
         }
     }
 }
