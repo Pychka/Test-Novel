@@ -9,9 +9,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.IO;
-using System.Text;
 
-namespace TestNovell
+namespace TestNovellRev2
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -22,18 +21,18 @@ namespace TestNovell
         string text = null, person = null;
         string[] choiceItems = null;
         int line = 0, numChoice = 0;
-        bool switchAnotherScene = true;
+        bool preview = false;
         public MainWindow()
         {
             InitializeComponent();
-            Start(line);
+            LetsContinue(line);
         }
-        private void CreateNewMessage(string text, string person)
+        private void CreateNewMessage(string text, string person) //Изменение области диалогов
         {
             DialogHeader.Text = person;
             DataDialog.Text = text;
         }
-        private void CreatingNewSurvey(string[] choiceItems)
+        private void CreatingNewSurvey(string[] choiceItems)//Создание нового блока выбора
         {
             for (int i = 0; i < choiceItems.Length; i++)
             {
@@ -47,20 +46,20 @@ namespace TestNovell
             }
         }
 
-        private void ChoiceButton_Click(object sender, RoutedEventArgs e)
+        private void ChoiceButton_Click(object sender, RoutedEventArgs e)//обработка элемента блока выбора
         {
             Button changeButton = (Button)sender;
             tw.TransitionSelectedBlock((int)changeButton.Tag, numChoice);
-            Start(line += 1);
+            LetsContinue(line += 1);
             ChoicesBox.Children.Clear();
         }
 
         private void Background_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            Start(line += 1);
+            LetsContinue(line += 1);
         }
 
-        private void Start(int line)
+        private void LetsContinue(int line)//переход к следующему сообщению
         {
             tw = new(File.ReadAllLines("Dialogs.txt"), line);
             tw.InspectionLine(ref text, ref person, ref numChoice, ref choiceItems);
@@ -69,11 +68,13 @@ namespace TestNovell
             if (choiceItems.Length > 0)
             {
                 CreatingNewSurvey(choiceItems);
-                Background.PreviewMouseLeftButtonDown -= Background_MouseDown;
+                GameWindow.PreviewMouseLeftButtonDown -= Background_MouseDown;
+                preview = false;
             }
-            else
+            else if (!preview)
             {
-                Background.PreviewMouseLeftButtonDown += Background_MouseDown;
+                GameWindow.PreviewMouseLeftButtonDown += Background_MouseDown;
+                preview = true;
             }
         }
     }
